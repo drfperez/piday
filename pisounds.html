@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Play Pi Digits</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+		#loading {
+			display: none;
+			font-size: 24px;
+			font-weight: bold;
+			text-align: center;
+		}
+	</style>
+	<script type="text/javascript">
+		function findAndPlayPiDigits() {
+			var digits = document.getElementById("digits").value;
+			if (digits < 1 || digits > 1000000) {
+				alert("Number of digits must be between 1 and 1,000,000");
+				return;
+			}
+
+			// Find pi
+			var response = fetch('https://pompeu.neocities.org/pi/9/pi.txt')
+				.then(function(response) {
+					return response.text();
+				})
+				.then(function(pi) {
+					var result = pi.replace(/\n/g, '').substring(0, parseInt(digits) + 2); // add 2 to account for the "3." at the beginning
+					var colors = ['blue', 'green', 'red', 'purple', 'orange', 'brown', 'black', 'gray', 'pink', 'teal'];
+					var i = 0;
+					var intervalId = setInterval(function() {
+						if (i >= result.length) {
+							clearInterval(intervalId);
+							playPi(result, digits);
+							return;
+						}
+
+						var digit = result.charAt(i);
+						var index = parseInt(digit);
+						var span = '<span style="color: ' + colors[index] + '">' + digit + '</span>';
+						document.getElementById("result").innerHTML += span;
+
+						i++;
+					}, 200);
+				})
+				.catch(function(error) {
+					console.error('Error finding pi:', error);
+				});
+
+			// Play pi
+			function playPi(result, digits) {
+				var audio = new AudioContext();
+				var oscillator = audio.createOscillator();
+				oscillator.type = "sine";
+				oscillator.connect(audio.destination);
+				oscillator.start();
+				for (var i = 0; i < digits; i++) {
+					var digit = parseInt(result.charAt(i+2)); // add 2 to skip the "3."
+					if (digit >= 0 && digit <= 9) {
+						var frequency = 440 + digit * 26.18;
+						oscillator.frequency.setValueAtTime(frequency, audio.currentTime + i * 0.2);
+						oscillator.frequency.exponentialRampToValueAtTime(0.001, audio.currentTime + (i+1) * 0.2);
+					}
+				}
+				oscillator.stop(audio.currentTime + digits * 0.2);
+			}
+
+		}
+
+		function reset() {
+			// Clear the input and result fields
+			document.getElementById("digits").value = "";
+			document.getElementById("result").innerHTML = "";
+
+			// Stop any currently playing audio
+			var audio = new AudioContext();
+			audio.suspend
+		}
+	</script>
+</head>
+<body>
+	<h1>Play Pi Digits</h1>
+	<p>Enter the number of digits you want to play:</p>
+	<input type="number" id="digits" name="digits" min="1" max="1000000" value="10">
+	<button id="play-button" onclick="findAndPlayPiDigits()">Play Pi Digits</button>
+<button id="reset-button" onclick="reset()">Reset</button>
+<p id="loading">Loading pi...</p>
+<div id="result"></div>
+
+</body>
+</html>
